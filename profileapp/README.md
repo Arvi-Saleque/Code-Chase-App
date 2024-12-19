@@ -1,6 +1,6 @@
-# profileapp
+# Code-Chase-App
 
-A new Flutter project.
+**Tagline:** *Code Better, Analyze Smarter.*
 
 ## Getting Started
 
