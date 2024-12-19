@@ -51,7 +51,8 @@ Follow these steps to set up the project locally:
 
 1. **Clone the repository and navigate to the project directory**:
    ```bash
-   git clone https://github.com/Arvi-Saleque/Code-Chase-App.git && cd Code-Chase-App/profileapp
+   git clone https://github.com/Arvi-Saleque/Code-Chase-App.git
+   cd Code-Chase-App/profileapp
 2. Install dependencies: Ensure you have Flutter installed on your machine. Then run:
    flutter pub get
    
