@@ -54,12 +54,12 @@ Follow these steps to set up the project locally:
    git clone https://github.com/Arvi-Saleque/Code-Chase-App.git
    cd Code-Chase-App/profileapp
 2. Install dependencies: Ensure you have Flutter installed on your machine. Then run:
-   flutter pub get
+   ```flutter pub get```
    
 3. Set up Firebase: Add your own Firebase configuration files (google-services.json for Android and GoogleService-Info.plist for iOS) if you plan to use Firebase for authentication and data storage. Update the Firebase configuration in firebase_options.dart.
 
 4. Run the app:
-   flutter run
+   ```flutter run```
 
 ## Technologies Used
 
