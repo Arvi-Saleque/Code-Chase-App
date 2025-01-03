@@ -118,6 +118,11 @@ class _DashboardPageState extends State<DashboardPage> {
       appBar: AppBar(
         title: const Text('Dashboard'),
         centerTitle: true,
+        titleTextStyle: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
       ),
       drawer: _buildDrawer(context),
       body: _isLoading
@@ -249,7 +254,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
                 Expanded(
                   child: SummaryCard(
-                    title: 'Avg Time/Solved',
+                    title: 'Avg Time/Problem',
                     value: '${avgTimeSolved.toStringAsFixed(2)} min',
                     icon: Icons.calculate,
                     color: Colors.orange,
@@ -311,7 +316,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       Icons.calendar_month, 'Monthly Analytics', '/monthly'),
                   _buildDrawerItem(
                       Icons.show_chart, 'Contest Performance', '/contest'),
-                  _buildDrawerItem(Icons.star, 'Marked Problems', '/marked'),
+                  _buildDrawerItem(
+                      Icons.favorite_sharp, 'Favorite Problems', '/favorite'),
+                  _buildDrawerItem(
+                      Icons.bookmark, 'Attempted Problem', '/attempted'),
                 ],
               ),
             ),

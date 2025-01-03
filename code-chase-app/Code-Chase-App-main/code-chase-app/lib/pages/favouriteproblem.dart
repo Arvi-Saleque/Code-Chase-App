@@ -2,11 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class MarkedProblemsPage extends StatelessWidget {
+class FavouriteProblemsPage extends StatelessWidget {
   final CollectionReference _firestoreRef = FirebaseFirestore.instance.collection("problems");
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  MarkedProblemsPage({super.key});
+  FavouriteProblemsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +17,7 @@ class MarkedProblemsPage extends StatelessWidget {
       body: StreamBuilder(
         stream: _firestoreRef
             .where('isFavorite', isEqualTo: true)
+            .where('status', isEqualTo: 'solved')
             .where('user', isEqualTo: _auth.currentUser!.uid)
             .snapshots(),
         builder: (context, snapshot) {
@@ -94,8 +95,6 @@ class MarkedProblemsPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                     color: problem['status'] == 'solved'
                         ? Colors.green
-                        : problem['status'] == 'Skipped'
-                        ? Colors.blue
                         : Colors.red,
                   ),
                 ),

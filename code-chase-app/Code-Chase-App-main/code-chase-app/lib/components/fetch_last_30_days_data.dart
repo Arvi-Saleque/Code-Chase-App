@@ -36,7 +36,9 @@ class FetchLast31DaysData {
       // Process problems for the specific day
       if (groupedProblems.containsKey(dateKey)) {
         for (var problem in groupedProblems[dateKey]!) {
-          solvedCount++;
+          if(problem['status'] == 'solved') {
+            solvedCount++;
+          }
           totalTimeInSeconds += (problem['actualTime'] as num?)?.toInt() ?? 0;
         }
       }

@@ -1,5 +1,4 @@
 // Import necessary packages
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -19,21 +18,29 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
   // List to store problem details
   final List<Map<String, dynamic>> _dailyData = [];
   final CollectionReference _firestoreRef = FirebaseFirestore.instance.collection("problems");
-
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
   late User user;
 
   // Variables for timer functionality
   Map<String, dynamic>? _currentProblem;
   Timer? _timer;
   int _elapsedTime = 0; // In seconds
+  bool _isPaused = false;
 
   @override
   void initState() {
     super.initState();
     _loadProblemsFromFirebase();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _unfocusCurrentField(); // Safe to call here
+  }
+
+  void _unfocusCurrentField() {
+    FocusScope.of(context).unfocus();
   }
 
   // Method to load problems from Firebase
@@ -79,32 +86,44 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
 
   // Method to start the timer
   void _startTimer(Map<String, dynamic> problem) {
-    if(mounted) {
-      setState(() {
-        _currentProblem = problem;
-        _elapsedTime = 1; // Start from 1 second
-      });
+    _timer?.cancel();
+    if(_isPaused) {
+      _isPaused = false;
+    } else {
+      if(mounted) {
+        setState(() {
+          _currentProblem = problem;
+          _elapsedTime = _elapsedTime > 0 ? _elapsedTime : 1; // Resume or start
+        });
+      }
     }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if(mounted) {
-        setState(() {
-          _elapsedTime++;
-        });
+      if(!_isPaused) {
+        if(mounted) {
+          setState(() {
+            _elapsedTime++;
+          });
+        }
       }
     });
   }
 
-  // Method to  stopthe timer
+  // Method to  pause the timer
+  void _pauseTimer() {
+    setState(() {
+      _isPaused = true;
+    });
+  }
+
+  // Method to  stop the timer
   void _stopTimer() {
     if (_currentProblem != null) {
-      final actualMinutes = _elapsedTime ~/ 60;
-      final actualHours = actualMinutes ~/ 60;
-      final remainingMinutes = actualMinutes % 60;
 
       if(mounted) {
         setState(() {
           _currentProblem!['actualTime'] = _elapsedTime;
+          _isPaused = false;
           int problemIndex = _dailyData.indexWhere((p) => p == _currentProblem);
           if (problemIndex != -1) {
             _dailyData[problemIndex] = _currentProblem!;
@@ -112,13 +131,13 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
         });
       }
 
-      // Show additional form after stopping the timer
+      // Cancel the timer and reset state
+      _timer?.cancel();
+      _timer = null;
       _showRemainingFieldsForm(_currentProblem!);
 
-      // Reset the timer and state
       _currentProblem = null;
       _elapsedTime = 0;
-      _timer?.cancel();
     }
   }
 
@@ -156,6 +175,24 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
+              onPressed: _isPaused ? () => _startTimer(_currentProblem!) : _pauseTimer,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 15,
+                  horizontal: 30,
+                ),
+              ),
+              child: Text(
+                _isPaused ? 'Resume' : 'Pause',
+                style: const TextStyle(fontSize: 18, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
               onPressed: _stopTimer,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -179,6 +216,7 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
   }
 
   void _showProblemDetailsDialog(Map<String, dynamic> problem) {
+    _unfocusCurrentField();
     showDialog(
       context: context,
       builder: (context) {
@@ -215,8 +253,6 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                         fontSize: 16,
                         color: problem['status'] == 'solved'
                             ? Colors.green
-                            : problem['status'] == 'Skipped'
-                            ? Colors.blue
                             : Colors.red,
                       )),
                 const SizedBox(height: 8),
@@ -280,8 +316,34 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 DropdownButtonFormField<String>(
                   value: platformText,
                   decoration: const InputDecoration(labelText: 'Platform'),
-                  items: ['CF', 'LeetCode', 'CodeChef', 'HackerRank', 'Vjudge']
-                      .map((platform) => DropdownMenuItem(
+                items: [
+                  'CF',          // Codeforces
+                  'LeetCode',
+                  'CodeChef',
+                  'HackerRank',
+                  'Vjudge',
+                  'AtCoder',
+                  'TopCoder',
+                  'HackerEarth',
+                  'SPOJ',        // Sphere Online Judge
+                  'UVa Online Judge',
+                  'CSES',        // CSES Problem Set
+                  'Kick Start',  // Google Kick Start
+                  'Facebook Hacker Cup',
+                  'ICPC Live Archive',
+                  'CSA',         // CSAcademy
+                  'Code Jam',    // Google Code Jam
+                  'Codewars',
+                  'Project Euler',
+                  'Timus Online Judge',
+                  'Kattis',
+                  'E-Olymp',
+                  'A2OJ',        // A2 Online Judge
+                  'BinarySearch',
+                  'Codeforces Gym',
+                  'Codeforces Virtual'
+                ]
+                .map((platform) => DropdownMenuItem(
                     value: platform,
                     child: Text(platform),
                   ))
@@ -294,7 +356,7 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 ),
                 MultiSelectTags(
                   availableTags: [
-                    'DP',
+                    'DP', // Dynamic Programming
                     'Greedy',
                     'Binary Search',
                     'Segment Tree',
@@ -305,6 +367,80 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                     'Math',
                     'Bit Manipulation',
                     'Adhoc',
+                    'Backtracking',
+                    'Brute Force',
+                    'Combinatorics',
+                    'Game Theory',
+                    'Hashing',
+                    'Trie',
+                    'Union-Find',
+                    'Minimum Spanning Tree',
+                    'Flow Network',
+                    'Two Pointers',
+                    'Sliding Window',
+                    'Sorting',
+                    'Heap',
+                    'Fenwick Tree',
+                    'Lazy Propagation',
+                    'Dynamic Connectivity',
+                    'Geometry',
+                    'Probability',
+                    'Number Theory',
+                    'Modulo Arithmetic',
+                    'Prefix Sum',
+                    'Suffix Array',
+                    'Knapsack',
+                    'Pattern Matching',
+                    'Monotonic Stack',
+                    'Disjoint Set',
+                    'Tree',
+                    'Binary Tree',
+                    'Tree DP',
+                    'Bitmask DP',
+                    '2D Geometry',
+                    'Recursion',
+                    'Divide and Conquer DP',
+                    'Convex Hull',
+                    'Convex Hull Trick',
+                    'KMP Algorithm',
+                    'Z-Algorithm',
+                    'Euler Tour',
+                    'Mo’s Algorithm',
+                    'Fast Fourier Transform',
+                    'Sparse Table',
+                    'Meet in the Middle',
+                    'Ternary Search',
+                    'Heavy-Light Decomposition',
+                    'Centroid Decomposition',
+                    'Binary Indexed Tree',
+                    'Persistent Data Structures',
+                    'Matrix Exponentiation',
+                    'Exponentiation by Squaring',
+                    'Graph Coloring',
+                    'Maximum Flow',
+                    'Eulerian Path',
+                    'Hamiltonian Path',
+                    'Cycle Detection',
+                    'LCA (Lowest Common Ancestor)',
+                    'Articulation Points',
+                    'Bridges',
+                    '2-SAT',
+                    '3-SAT',
+                    'Linear Programming',
+                    'Sieve of Eratosthenes',
+                    'Prime Factorization',
+                    'Chinese Remainder Theorem',
+                    'Floyd-Warshall',
+                    'Dijkstra’s Algorithm',
+                    'Bellman-Ford',
+                    'Kruskal’s Algorithm',
+                    'Prim’s Algorithm',
+                    'Tarjan’s Algorithm',
+                    'Kosaraju’s Algorithm',
+                    'Ford-Fulkerson',
+                    'Edmonds-Karp',
+                    'Dinic’s Algorithm',
+                    'Hopcroft-Karp',
                   ],
                   selectedTags: selectedTags,
                   onSelectionChanged: (newTags) {
@@ -313,7 +449,7 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 ),
                 DropdownButtonFormField<String>(
                   value: statusController.text.isNotEmpty ? statusController.text : null,
-                  items: ['solved', 'Attempted but not solved', 'Skipped']
+                  items: ['solved', 'Attempted but not solved']
                       .map((status) => DropdownMenuItem(
                     value: status,
                     child: Text(status),
@@ -386,131 +522,140 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daily Tracker'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: ElevatedButton.icon(
-              onPressed: _showAddProblemForm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                elevation: 5,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              icon: const Icon(Icons.add, size: 20, color: Colors.white,),
-              label: const Text(
-                'Add Problem',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
+    return GestureDetector(
+      onTap: () {
+        _unfocusCurrentField();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Daily Tracker'),
+          centerTitle: true,
+          titleTextStyle: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
           ),
-        ],
-      ),
-
-      body: Stack(
-        children: [
-          ListView.builder(
-            itemCount: _dailyData.length,
-            itemBuilder: (context, index) {
-              final problem = _dailyData[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                elevation: 5,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            problem['name'],
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            problem['status'] ?? 'Pending',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: problem['status'] == 'solved'
-                                  ? Colors.green
-                                  : problem['status'] == 'Skipped'
-                                  ? Colors.blue
-                                  : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          Chip(
-                            label: Text('Rating: ${problem['rating']}'),
-                            backgroundColor: Colors.blue[50],
-                          ),
-                          Chip(
-                            label: Text(
-                                'Time Taken: ${(problem['actualTime'] / 60).toStringAsFixed(2)} mins'),
-                            backgroundColor: Colors.orange[50],
-                          ),
-                          if (problem['tags'] != null)
-                            for (String tag in problem['tags'])
-                              Chip(
-                                label: Text(tag),
-                                backgroundColor: Colors.purple[50],
-                              ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            onPressed: () => _editProblem(problem),
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                          ),
-                          IconButton(
-                            onPressed: () => deleteProblem(problem),
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                          ),
-                          IconButton(
-                            onPressed: () => _showProblemDetailsDialog(problem),
-                            icon: const Icon(Icons.info_outline,
-                                color: Colors.blue),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              _toggleFavoriteProblem(problem);
-                            },
-                            icon: Icon(
-                              problem['isFavorite'] == true ? Icons.star : Icons.star_border,
-                              color: problem['isFavorite'] == true ? Colors.orange : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ElevatedButton.icon(
+                onPressed: _showAddProblemForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  elevation: 5,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-              );
-            },
-          ),
-          if (_currentProblem != null) _buildTimerOverlay(),
-        ],
+                icon: const Icon(Icons.add, size: 20, color: Colors.white,),
+                label: const Text(
+                  'Add Problem',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      
+        body: Stack(
+          children: [
+            ListView.builder(
+              itemCount: _dailyData.length,
+              itemBuilder: (context, index) {
+                final problem = _dailyData[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  elevation: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              problem['name'],
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              problem['status'] ?? 'Pending',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: problem['status'] == 'solved'
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Chip(
+                              label: Text('Rating: ${problem['rating']}'),
+                              backgroundColor: Colors.blue[50],
+                            ),
+                            Chip(
+                              label: Text(
+                                  'Time Taken: ${(problem['actualTime'] / 60).toStringAsFixed(2)} mins'),
+                              backgroundColor: Colors.orange[50],
+                            ),
+                            if (problem['tags'] != null)
+                              for (String tag in problem['tags'])
+                                Chip(
+                                  label: Text(tag),
+                                  backgroundColor: Colors.purple[50],
+                                ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              onPressed: () => _editProblem(problem),
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                            ),
+                            IconButton(
+                              onPressed: () => deleteProblem(problem),
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                            ),
+                            IconButton(
+                              onPressed: () => _showProblemDetailsDialog(problem),
+                              icon: const Icon(Icons.info_outline,
+                                  color: Colors.blue),
+                            ),
+                            IconButton(
+                              onPressed: () {
+                                _toggleFavoriteProblem(problem);
+                              },
+                              icon: Icon(
+                                problem['isFavorite'] == true ? Icons.star : Icons.star_border,
+                                color: problem['isFavorite'] == true ? Colors.orange : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            if (_currentProblem != null) _buildTimerOverlay(),
+          ],
+        ),
       ),
     );
   }
@@ -656,8 +801,34 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 DropdownButtonFormField<String>(
                   value: platformText,
                   decoration: const InputDecoration(labelText: 'Platform'),
-                  items: ['CF', 'LeetCode', 'CodeChef', 'HackerRank', 'Vjudge']
-                      .map((platform) => DropdownMenuItem(
+                    items: [
+                      'CF',          // Codeforces
+                      'LeetCode',
+                      'CodeChef',
+                      'HackerRank',
+                      'Vjudge',
+                      'AtCoder',
+                      'TopCoder',
+                      'HackerEarth',
+                      'SPOJ',        // Sphere Online Judge
+                      'UVa Online Judge',
+                      'CSES',        // CSES Problem Set
+                      'Kick Start',  // Google Kick Start
+                      'Facebook Hacker Cup',
+                      'ICPC Live Archive',
+                      'CSA',         // CSAcademy
+                      'Code Jam',    // Google Code Jam
+                      'Codewars',
+                      'Project Euler',
+                      'Timus Online Judge',
+                      'Kattis',
+                      'E-Olymp',
+                      'A2OJ',        // A2 Online Judge
+                      'BinarySearch',
+                      'Codeforces Gym',
+                      'Codeforces Virtual'
+                    ]
+                    .map((platform) => DropdownMenuItem(
                     value: platform,
                     child: Text(platform),
                   ))
@@ -670,7 +841,7 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 ),
                 MultiSelectTags(
                   availableTags: [
-                    'DP',
+                    'DP', // Dynamic Programming
                     'Greedy',
                     'Binary Search',
                     'Segment Tree',
@@ -681,6 +852,80 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                     'Math',
                     'Bit Manipulation',
                     'Adhoc',
+                    'Backtracking',
+                    'Brute Force',
+                    'Combinatorics',
+                    'Game Theory',
+                    'Hashing',
+                    'Trie',
+                    'Union-Find',
+                    'Minimum Spanning Tree',
+                    'Flow Network',
+                    'Two Pointers',
+                    'Sliding Window',
+                    'Sorting',
+                    'Heap',
+                    'Fenwick Tree',
+                    'Lazy Propagation',
+                    'Dynamic Connectivity',
+                    'Geometry',
+                    'Probability',
+                    'Number Theory',
+                    'Modulo Arithmetic',
+                    'Prefix Sum',
+                    'Suffix Array',
+                    'Knapsack',
+                    'Pattern Matching',
+                    'Monotonic Stack',
+                    'Disjoint Set',
+                    'Tree',
+                    'Binary Tree',
+                    'Tree DP',
+                    'Bitmask DP',
+                    '2D Geometry',
+                    'Recursion',
+                    'Divide and Conquer DP',
+                    'Convex Hull',
+                    'Convex Hull Trick',
+                    'KMP Algorithm',
+                    'Z-Algorithm',
+                    'Euler Tour',
+                    'Mo’s Algorithm',
+                    'Fast Fourier Transform',
+                    'Sparse Table',
+                    'Meet in the Middle',
+                    'Ternary Search',
+                    'Heavy-Light Decomposition',
+                    'Centroid Decomposition',
+                    'Binary Indexed Tree',
+                    'Persistent Data Structures',
+                    'Matrix Exponentiation',
+                    'Exponentiation by Squaring',
+                    'Graph Coloring',
+                    'Maximum Flow',
+                    'Eulerian Path',
+                    'Hamiltonian Path',
+                    'Cycle Detection',
+                    'LCA (Lowest Common Ancestor)',
+                    'Articulation Points',
+                    'Bridges',
+                    '2-SAT',
+                    '3-SAT',
+                    'Linear Programming',
+                    'Sieve of Eratosthenes',
+                    'Prime Factorization',
+                    'Chinese Remainder Theorem',
+                    'Floyd-Warshall',
+                    'Dijkstra’s Algorithm',
+                    'Bellman-Ford',
+                    'Kruskal’s Algorithm',
+                    'Prim’s Algorithm',
+                    'Tarjan’s Algorithm',
+                    'Kosaraju’s Algorithm',
+                    'Ford-Fulkerson',
+                    'Edmonds-Karp',
+                    'Dinic’s Algorithm',
+                    'Hopcroft-Karp',
                   ],
                   selectedTags: selectedTags,
                   onSelectionChanged: (newTags) {
@@ -689,7 +934,7 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
                 ),
                 DropdownButtonFormField<String>(
                   value: statusController.text.isNotEmpty ? statusController.text : null,
-                  items: ['solved', 'Attempted but not solved', 'Skipped']
+                  items: ['solved', 'Attempted but not solved']
                       .map((status) => DropdownMenuItem(
                     value: status,
                     child: Text(status),

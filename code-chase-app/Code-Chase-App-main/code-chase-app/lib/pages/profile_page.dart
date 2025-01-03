@@ -203,8 +203,14 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
         title: const Text('Profile Page'),
+        centerTitle: true,
+        backgroundColor: Colors.teal.shade600,
+        titleTextStyle: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
         actions: [
           IconButton(
             onPressed: signOutUser,

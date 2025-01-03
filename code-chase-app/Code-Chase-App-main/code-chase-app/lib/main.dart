@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:profileapp/pages/auth_page.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:profileapp/pages/contest_page.dart';
 import 'package:profileapp/pages/contestperformancepage.dart';
+import 'package:profileapp/pages/favouriteproblem.dart';
 import 'package:profileapp/pages/markedproblempage.dart';
 import 'package:profileapp/pages/my_friends_page.dart';
 import 'package:profileapp/pages/search_page.dart';
@@ -35,7 +35,8 @@ class MyApp extends StatelessWidget {
         '/weekly': (context) => WeeklyAnalyticsPage(),
         '/monthly': (context) => MonthlyAnalyticsPage(),
         '/contest': (context) => const ContestPerformancePage(),
-        '/marked': (context) => MarkedProblemsPage(),
+        '/favorite': (context) => FavouriteProblemsPage(),
+        '/attempted': (context) => MarkedProblemsPage(),
         '/myFriends': (context) => MyFriendsAllPage(),
         '/searchFriends': (context) => SearchPage(),
       },

@@ -52,8 +52,6 @@ class ProblemDetailsDialog extends StatelessWidget {
                   fontSize: 16,
                   color: problem['status'] == 'solved'
                       ? Colors.green
-                      : problem['status'] == 'Skipped'
-                      ? Colors.blue
                       : Colors.red,
                 ),
               ),

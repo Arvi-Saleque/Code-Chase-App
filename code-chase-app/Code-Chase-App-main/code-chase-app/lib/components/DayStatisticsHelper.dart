@@ -21,7 +21,7 @@ class DayStatisticsHelper {
           .where('user', isEqualTo: userId)
           .where('updatedAt', isGreaterThanOrEqualTo: startTimestamp)
           .where('updatedAt', isLessThan: endTimestamp)
-          .where('status', isEqualTo: 'solved')
+          .where('status', whereIn: ['solved', 'Attempted but not solved'])
           .get();
 
       // Return the list of documents for processing
